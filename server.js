@@ -4,6 +4,8 @@ const cors = require("cors");
 const authRoutes = require("./routes/auth");
 const astrofitRoutes = require("./routes/astrofit");
 const { authenticateToken } = require("./middleware/auth");
+const coachRoutes = require("./routes/coach");
+app.use("/api/coach", coachRoutes); // no auth needed
 
 const app = express();
 const PORT = process.env.PORT || 3000;
