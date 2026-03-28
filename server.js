@@ -296,27 +296,41 @@ app.post('/api/astrofit/add-xp', verifyToken, (req, res) => {
   );
 });
 
-// Update streak
+// Update streak — safe, idempotent, one increment per calendar day
 app.post('/api/astrofit/update-streak', verifyToken, (req, res) => {
-  db.run(
-    `UPDATE user_profiles 
-     SET day_streak = day_streak + 1, last_active_date = DATE('now'), updated_at = CURRENT_TIMESTAMP
-     WHERE user_id = ?`,
+  db.get(
+    'SELECT day_streak, last_active_date FROM user_profiles WHERE user_id = ?',
     [req.userId],
-    (err) => {
-      if (err) {
-        return res.status(500).json({ error: 'Streak update failed' });
+    (err, profile) => {
+      if (err) return res.status(500).json({ error: 'Profile fetch error' });
+
+      const today = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+      const lastActive = profile?.last_active_date;
+
+      // Already updated today — return current streak, do nothing
+      if (lastActive === today) {
+        return res.json({ day_streak: profile.day_streak, already_updated: true });
       }
 
-      db.get(
-        'SELECT day_streak FROM user_profiles WHERE user_id = ?',
-        [req.userId],
-        (getErr, profile) => {
-          if (getErr) {
-            return res.status(500).json({ error: 'Profile fetch error' });
-          }
+      // Check if streak should be reset (missed more than 1 day)
+      let newStreak = (profile.day_streak || 0) + 1;
+      if (lastActive) {
+        const last = new Date(lastActive);
+        const now = new Date(today);
+        const daysDiff = Math.round((now - last) / (1000 * 60 * 60 * 24));
+        if (daysDiff > 1) {
+          newStreak = 1; // missed a day — reset to 1 (today counts)
+        }
+      }
 
-          res.json({ day_streak: profile.day_streak });
+      db.run(
+        `UPDATE user_profiles 
+         SET day_streak = ?, last_active_date = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = ?`,
+        [newStreak, today, req.userId],
+        (updateErr) => {
+          if (updateErr) return res.status(500).json({ error: 'Streak update failed' });
+          res.json({ day_streak: newStreak });
         }
       );
     }
