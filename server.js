@@ -22,7 +22,8 @@ app.use(express.json());
 // Initialize PostgreSQL Database (for Supabase)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  family: 4
 });
 
 // Test database connection
