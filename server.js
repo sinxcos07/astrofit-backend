@@ -15,9 +15,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
 
 // Middleware
 app.use(cors({
-  origin: process.env.CORS_ORIGIN?.split(',') || '*'
+  origin: process.env.CORS_ORIGIN?.split(',') || '*',
+  credentials: true
 }));
-app.use(express.json());
 
 // Initialize PostgreSQL Database (for Supabase)
 const pool = new Pool({
